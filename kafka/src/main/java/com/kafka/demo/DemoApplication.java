@@ -5,25 +5,20 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.*;
-import org.apache.kafka.common.protocol.types.Field;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.*;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.KeyValueMapper;
-import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.web.servlet.function.ServerResponse;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.function.Consumer;
 
 @SpringBootApplication
 public class DemoApplication {
@@ -243,6 +238,42 @@ public class DemoApplication {
 		joinedStream.to("click-by-users");
 
 		KafkaStreams app = new KafkaStreams(builder.build(), configs);
+		app.start();
+	}
+
+	private static void kStremWindow() {
+		StreamsBuilder builder = new StreamsBuilder();
+
+		KStream<String, String> clicks = builder.stream("clicks");
+
+		KGroupedStream<String, String> clickByUser = clicks.groupByKey();
+
+		TimeWindowedKStream<String, String> clicksByUserPerHour =
+				clickByUser.windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofHours(1)));
+
+		KTable<Windowed<String>, Long> clicksPerHourByUser = clicksByUserPerHour.count();
+
+		clicksPerHourByUser.toStream().to("clicks-per-hour");
+
+	}
+
+	private static void interactiveQuery() {
+		// read store
+		Properties configs = new Properties();
+		configs.put(StreamsConfig.APPLICATION_ID_CONFIG, "counts-app");
+		configs.put(StreamsConfig.APPLICATION_SERVER_CONFIG, "localhost:8080");
+		configs.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+		configs.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String());
+		configs.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		KStream<String, String> source = builder.stream("source");
+
+		Materialized<String, Long, KeyValueStore<Bytes, byte[]>> store = Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("stateStore").withKeySerde(Serdes.String()).withValueSerde(Serdes.Long());
+
+		source.groupByKey().count(store).toStream().to("target", Produced.with(Serdes.String(), Serdes.Long()));
+		KafkaStreams app = new KafkaStreams(builder.build(), configs);
+
 		app.start();
 	}
 }
