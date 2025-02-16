@@ -51,9 +51,16 @@ public class DemoApplication {
 		Properties properties = new Properties();
 		// initial connection
 		properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+		// we have 0, 1 at least one, or all, control trade off
+		properties.setProperty(ProducerConfig.ACKS_CONFIG, "all");
+		// control unique message, send once even failure
+		properties.setProperty(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
+		// default byte arrays
 		properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
 		properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+		// timeout
 		properties.setProperty(ProducerConfig.LINGER_MS_CONFIG, "1");
+		// delivery.timeout.ms for aks
 
 		Producer<String, String> producer = new KafkaProducer<>(properties);
 		CountDownLatch countDownLatch = new CountDownLatch(5);
