@@ -5,6 +5,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.protocol.types.Field;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.streams.*;
@@ -193,15 +194,33 @@ public class DemoApplication {
 		upperCased.peek((k,v) -> System.out.println(k));
 
 		upperCased.to("output-topic");
-		
+
 		Topology topology = builder.build();
 		KafkaStreams streams = new KafkaStreams(topology, config);
 
 		Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
 
 		streams.start();
-
-
 	}
 
+	private static void kStreamStateful() {
+		Properties config = new Properties();
+		config.put(StreamsConfig.APPLICATION_ID_CONFIG, "counts-app");
+		config.put(StreamsConfig.APPLICATION_SERVER_CONFIG, "localhost:9090");
+		config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+		config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String());
+		config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		KStream<String, String> source = builder.stream("input-topic");
+
+		source.groupByKey()
+				.count()
+				.toStream()
+				.to("output-topic", Produced.with(Serdes.String(), Serdes.Long()));
+
+		KafkaStreams app = new KafkaStreams(builder.build(), config);
+
+		app.start();
+	}
 }
