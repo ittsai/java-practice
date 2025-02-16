@@ -5,9 +5,15 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.streams.*;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KeyValueMapper;
+import org.apache.kafka.streams.kstream.Produced;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.servlet.function.ServerResponse;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -112,8 +118,12 @@ public class DemoApplication {
 		properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupName);
 		properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
 		properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+		//  the consumer will start consuming from the earliest available offset in the partition
+		// latest, or none
 		properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
+		// fetch.max.wait.ms
+		// This configuration specifies the maximum amount of time in milliseconds that the broker should wait for the minimum number of bytes specified by the fetch.min.bytes configuration to become available before responding to a fetch request.
+		// A good starting value is usually around 5 seconds.
 		KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
 
 		consumer.subscribe(Collections.singletonList(topicName));
@@ -137,6 +147,61 @@ public class DemoApplication {
 		} finally {
 			consumer.close();
 		}
+	}
+
+	/*
+	* Arguments
+
+    kafka-topics.sh: This is used to manage the topics in our Kafka server.
+
+    --create: This indicates that we are creating a new topic.
+        --topic topic: Here, we specify our topic name.
+
+    --bootstrap-server localhost:9092: Here, we specify the server and the hostname and port number on which our Kafka server is up and running.
+
+    --replication-factor: This is used to give the number of replication factors in our topic.
+
+    --partitions: At the end of our command, we define the number of partitions in our Kafka topic.
+*/
+
+	private static void kSteamMap() {
+		StreamsBuilder builder = new StreamsBuilder();
+
+		KStream<String, String> stream = builder.stream("input");
+
+		stream.map(new KeyValueMapper<String, String, KeyValue<?, ?>>() {
+			@Override
+			public KeyValue<String, String> apply(String s, String s2) {
+				return new KeyValue<>(s.toLowerCase(), s2.toUpperCase());
+			}
+		});
+	}
+
+	public static void kSteam() {
+		Properties config = new Properties();
+		config.put(StreamsConfig.APPLICATION_ID_CONFIG, "dsl-api");
+		config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+		config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String());
+		config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		KStream<String, String> input = builder.stream("input-topic");
+
+		KStream<String, String> filtered = input.filter((k,v) -> k.length() > 5);
+		KStream<String, String> upperCased = filtered.mapValues(value -> value.toUpperCase());
+
+		upperCased.peek((k,v) -> System.out.println(k));
+
+		upperCased.to("output-topic");
+		
+		Topology topology = builder.build();
+		KafkaStreams streams = new KafkaStreams(topology, config);
+
+		Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+
+		streams.start();
+
+
 	}
 
 }
