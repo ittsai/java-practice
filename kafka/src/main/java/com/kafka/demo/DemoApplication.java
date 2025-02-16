@@ -10,6 +10,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.KeyValueMapper;
 import org.apache.kafka.streams.kstream.Produced;
 import org.springframework.boot.SpringApplication;
@@ -221,6 +222,27 @@ public class DemoApplication {
 
 		KafkaStreams app = new KafkaStreams(builder.build(), config);
 
+		app.start();
+	}
+
+	private static void kStreamJoin() {
+		Properties configs = new Properties();
+		configs.put(StreamsConfig.APPLICATION_ID_CONFIG, "join-app");
+		configs.put(StreamsConfig.APPLICATION_SERVER_CONFIG, "localhost:8080");
+		configs.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+		configs.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+		configs.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+
+		StreamsBuilder builder = new StreamsBuilder();
+		KStream<String, String> clickStream = builder.stream("click");
+		KTable<String, String> usersTable = builder.table("users");
+
+		KStream<String, String> joinedStream = clickStream.join(usersTable,
+				(ad, user) -> user + " clicked " + ad);
+
+		joinedStream.to("click-by-users");
+
+		KafkaStreams app = new KafkaStreams(builder.build(), configs);
 		app.start();
 	}
 }
