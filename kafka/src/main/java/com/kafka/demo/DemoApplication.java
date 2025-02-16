@@ -1,13 +1,21 @@
 package com.kafka.demo;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.time.Duration;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 @SpringBootApplication
 public class DemoApplication {
@@ -89,6 +97,46 @@ public class DemoApplication {
 		countDownLatch.await();
 		producer.flush();
 		producer.close();
+	}
+
+	private static void consumer() {
+		String defaultTopicName = "test-topic";
+		String defaultGroupName = "test-group";
+
+		String topicName = System.getenv("TOPIC_NAME") != null ? System.getenv("TOPIC_NAME") : defaultTopicName;
+		String groupName = System.getenv("CONSUMER_GROUP_NAME") != null ? System.getenv("CONSUMER_GROUP_NAME") : defaultGroupName;
+
+		Properties properties = new Properties();
+
+		properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+		properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupName);
+		properties.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+		properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+		properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+		KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
+
+		consumer.subscribe(Collections.singletonList(topicName));
+
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			System.out.println("Stop");
+			consumer.close();
+		}));
+
+		try {
+			while(true) {
+				ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+				for(ConsumerRecord<String, String> record : records) {
+					System.out.println(record.topic());
+					System.out.println(record.partition());
+					System.out.println(record.offset());
+					System.out.println(record.key());
+					System.out.println(record.value());
+				}
+			}
+		} finally {
+			consumer.close();
+		}
 	}
 
 }
