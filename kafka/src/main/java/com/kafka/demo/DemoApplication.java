@@ -13,6 +13,7 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.kafka.annotation.KafkaListener;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -26,6 +27,12 @@ public class DemoApplication {
 	public static void main(String[] args) {
 
 		SpringApplication.run(DemoApplication.class, args);
+	}
+
+	// this is consumer, id is Consumer Group id
+	@KafkaListener(id = "demo.group", topics = "test-topic")
+	public void listen(String msg) {
+		System.out.println(msg);
 	}
 
 	private static void syncProducer() throws Exception{
