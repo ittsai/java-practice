@@ -178,8 +178,8 @@ public class DemoApplication {
 		Properties config = new Properties();
 		config.put(StreamsConfig.APPLICATION_ID_CONFIG, "dsl-api");
 		config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-		config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String());
-		config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String());
+		config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+		config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
 
 		StreamsBuilder builder = new StreamsBuilder();
 		KStream<String, String> input = builder.stream("input-topic");
@@ -204,8 +204,8 @@ public class DemoApplication {
 		config.put(StreamsConfig.APPLICATION_ID_CONFIG, "counts-app");
 		config.put(StreamsConfig.APPLICATION_SERVER_CONFIG, "localhost:9090");
 		config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-		config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String());
-		config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String());
+		config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+		config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
 
 		StreamsBuilder builder = new StreamsBuilder();
 		KStream<String, String> source = builder.stream("input-topic");
@@ -263,8 +263,8 @@ public class DemoApplication {
 		configs.put(StreamsConfig.APPLICATION_ID_CONFIG, "counts-app");
 		configs.put(StreamsConfig.APPLICATION_SERVER_CONFIG, "localhost:8080");
 		configs.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-		configs.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String());
-		configs.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String());
+		configs.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+		configs.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
 
 		StreamsBuilder builder = new StreamsBuilder();
 		KStream<String, String> source = builder.stream("source");

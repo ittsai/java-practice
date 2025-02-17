@@ -1,0 +1,17 @@
+{
+  "name": "source-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "localhost",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "postgres",
+    "database.dbname": "postgres",
+    "database.server.name": "serverDB",
+    "plugin.name": "wal2json",
+    "table.include.list": "public.orders",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": false,
+    "publication.autocreate.mode": "filtered"
+  }
+}
